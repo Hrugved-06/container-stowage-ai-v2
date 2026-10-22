@@ -78,10 +78,35 @@ function App() {
           {activeTab === "overview" && (
             <>
               <div className="metric-grid">
-                <Metric title="Vessel capacity" value="—" detail="TEU" />
-                <Metric title="Containers loaded" value="0" detail="Awaiting manifest" />
-                <Metric title="Ports of call" value="0" detail="No voyage configured" />
-                <Metric title="Plan status" value="Draft" detail="No plan generated" />
+                
+            
+
+  <Metric
+    title="Vessel Slots"
+    value="4,000"
+    detail="Synthetic vessel positions"
+  />
+
+  <Metric
+    title="Uploaded Containers"
+    value={String(uploadedContainers.length)}
+    detail="Imported cargo manifest"
+  />
+
+  <Metric
+    title="Assigned Containers"
+    value={String(latestPlan?.assignments.length ?? 0)}
+    detail="Latest stowage plan"
+  />
+
+  <Metric
+    title="Plan Status"
+    value={latestPlan ? "Generated" : "Draft"}
+    detail={latestPlan ? "Plan available" : "No plan generated"}
+  />
+
+
+
               </div>
 
               <div className="panel">
@@ -90,7 +115,15 @@ function App() {
                     <h2>Planning workspace</h2>
                     <p>Start by defining your cargo and vessel.</p>
                   </div>
-                  <span className="draft-badge">NOT CONFIGURED</span>
+                  
+<span className="draft-badge">
+  {latestPlan
+    ? "PLAN GENERATED"
+    : uploadedContainers.length > 0
+    ? "MANIFEST LOADED"
+    : "NOT CONFIGURED"}
+</span>
+
                 </div>
 
                 <div className="action-grid">
@@ -849,7 +882,9 @@ function ManifestUpload({
 
 
   return (
-    <div className="panel">
+    
+<div className="panel manifest-upload">
+
       <h2>Import Cargo Manifest</h2>
       <p>Upload a CSV or Excel (.xlsx) file containing your containers.</p>
 
@@ -1018,6 +1053,30 @@ function VesselLayout({
             </select>
           </label>
 
+          
+<div className="vessel-legend">
+  <span>
+    <span className="legend-color occupied" />
+    Occupied Container (C)
+  </span>
+
+  <span>
+    <span className="legend-color empty" />
+    Empty Position (H / D)
+  </span>
+</div>
+
+<p className="bay-summary">
+  Selected Bay: {String(selectedBay).padStart(2, "0")}
+  {" | "}
+  Occupied Positions: {
+    baySlots.filter((slot) =>
+      occupiedPositions.has(slot.position_code)
+    ).length
+  }
+</p>
+
+
           <div style={{ overflowX: "auto", marginTop: "20px" }}>
             <table>
               <thead>
@@ -1060,7 +1119,7 @@ function VesselLayout({
                               }}
                             >
                               {occupiedPositions.has(slot.position_code)
-                                ? occupiedPositions.get(slot.position_code)
+                                ? "C"
                                 : slot.location === "hold"
                                   ? "H"
                                   : "D"}
