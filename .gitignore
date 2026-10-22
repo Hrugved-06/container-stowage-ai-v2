@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+build/
+.vscode/
+.idea/
+.pytest_cache/
+
+# Generated placement outputs
+ai_placements*.json
+python_placements.json
+
+# Python test and coverage output
+.coverage
+htmlcov/
