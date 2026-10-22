@@ -107,7 +107,6 @@ def create_stowage_plan(
 
 
     if use_ai and containers:
-<<<<<<< HEAD
         batch_size = 5
         ai_claimed_slots = set()
 
@@ -287,15 +286,6 @@ def create_stowage_plan(
                         continue
 
 
-=======
-        ai_proposals = get_ai_batch_proposals(
-            containers,
-            available_slots,
-            slots_by_position,
-            max_batches=4,
-        )
-
->>>>>>> origin/main
     for container in containers:
         chosen_slot = None
         chosen_positions = None
@@ -437,6 +427,35 @@ def create_stowage_plan(
         })
 
     rehandling = estimate_rehandles(assignments, manifest, vessel)
+
+
+    # Compare the AI plan with the Python-only baseline.
+    if use_ai and ai_proposals:
+        baseline = create_stowage_plan(
+            manifest,
+            vessel,
+            use_ai=False,
+        )
+
+        ai_rehandles = rehandling["estimated_rehandles"]
+        baseline_rehandles = baseline["estimated_rehandles"]
+
+        if (
+            baseline["assigned_count"] > len(assignments)
+            or (
+                baseline["assigned_count"] == len(assignments)
+                and baseline_rehandles < ai_rehandles
+            )
+        ):
+            baseline["ai_proposed_count"] = len(ai_proposals)
+            baseline["ai_accepted_count"] = 0
+            baseline["ai_fallback_count"] = len(ai_proposals)
+            baseline["ai_preferred_occupied_count"] = ai_preferred_occupied_count
+            baseline["selection_mode"] = "python_baseline_fallback"
+            baseline["ai_candidate_rehandles"] = ai_rehandles
+
+            return baseline
+
 
     return {
         "vessel_id": vessel.vessel_id,

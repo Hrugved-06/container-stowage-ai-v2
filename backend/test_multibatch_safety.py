@@ -34,7 +34,7 @@ def fake_qwen(prompt):
     })
 
 with patch(
-    "backend.ai_service.propose_container_placements",
+    "backend.placement.propose_container_placements",
     side_effect=fake_qwen
 ):
     result = create_stowage_plan(
