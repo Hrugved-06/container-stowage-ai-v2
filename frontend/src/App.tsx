@@ -270,6 +270,7 @@ function CargoManifestForm({
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [useAIForPlacement, setUseAIForPlacement] = useState(false);
 
   const [portSequence, setPortSequence] = useState("JNPT, Singapore, Hamburg");
   const [voyageLoading, setVoyageLoading] = useState(false);
@@ -341,6 +342,7 @@ const [plan, setPlan] = useState<null | {
               hazardous: Boolean(item.hazardous ?? false),
             })),
           },
+          use_ai: useAIForPlacement,
         }),
       });
 
@@ -588,6 +590,15 @@ const [plan, setPlan] = useState<null | {
           </label>
         </div>
       ))}
+
+      <label className="cargo-checkbox" style={{ marginTop: "16px" }}>
+        <input
+          type="checkbox"
+          checked={useAIForPlacement}
+          onChange={(event) => setUseAIForPlacement(event.target.checked)}
+        />
+        Use local AI slot suggestions (slower)
+      </label>
 
       <div className="cargo-actions">
         <button
