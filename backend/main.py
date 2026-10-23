@@ -33,6 +33,7 @@ app.add_middleware(
 class PlanningRequest(BaseModel):
     manifest: CargoManifest
     vessel: VesselSlotPlan | None = None
+    use_ai: bool = False
 
 class VoyageSimulationRequest(BaseModel):
     manifest: CargoManifest
@@ -70,6 +71,7 @@ def generate_plan(request: PlanningRequest):
         return create_stowage_plan(
             request.manifest,
             vessel,
+            use_ai=request.use_ai,
         )        
     except ValueError as exc:
         raise HTTPException(
