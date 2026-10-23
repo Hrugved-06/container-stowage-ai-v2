@@ -385,5 +385,10 @@ def export_plan(
 @app.get("/api/vessel/layout")
 def get_vessel_layout():
     vessel = create_vessel_layout()
-    return vessel.model_dump()
+    data = vessel.model_dump()
+
+    for slot_data, slot in zip(data["slots"], vessel.slots):
+        slot_data["position_code"] = slot.position_code
+
+    return data
 
