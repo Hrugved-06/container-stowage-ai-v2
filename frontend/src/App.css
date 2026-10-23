@@ -700,3 +700,95 @@ h2 {
   color: #b7c4d7;
   line-height: 1.5;
 }
+
+
+/* Cargo manifest upload format guide */
+
+.manifest-format-guide {
+  margin: 18px 0 20px;
+  padding: 18px;
+  background: #0c1524;
+  border: 1px solid #2a3a50;
+  border-radius: 10px;
+}
+
+.manifest-format-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.manifest-format-heading h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.manifest-format-heading p {
+  margin: 6px 0 0;
+}
+
+.manifest-format-table-wrapper {
+  overflow-x: auto;
+}
+
+.manifest-format-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+}
+
+.manifest-format-table th,
+.manifest-format-table td {
+  padding: 10px 12px;
+  border: 1px solid #2a3a50;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.manifest-format-table th {
+  background: #123044;
+  color: #e8edf5;
+  font-size: 12px;
+}
+
+.manifest-format-table td {
+  color: #b7c4d7;
+  font-size: 12px;
+}
+
+.required-tag,
+.optional-tag {
+  display: block;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.required-tag {
+  color: #fecaca;
+  background: #451a1a;
+  border: 1px solid #7f1d1d;
+}
+
+.optional-tag {
+  color: #bae6fd;
+  background: #0c4a6e;
+  border: 1px solid #075985;
+}
+
+.manifest-format-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .manifest-format-heading {
+    flex-direction: column;
+  }
+}
