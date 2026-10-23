@@ -2,6 +2,7 @@
 
 import io
 import json
+import re
 import pandas as pd
 
 from docx import Document
@@ -191,9 +192,171 @@ def _build_ai_dataset_context(
     return json.dumps(context, indent=2, default=str)
 
 
+def _fast_dataset_answer(
+    question: str,
+    containers: list[dict],
+    plan: dict | None,
+) -> str | None:
+    """Answer common factual dataset questions without calling the LLM."""
+
+    if not containers:
+        return None
+
+    q = question.lower().strip()
+
+    container_by_id = {
+        str(item.get("container_id", "")).strip().upper(): item
+        for item in containers
+        if str(item.get("container_id", "")).strip()
+    }
+
+    assignment_by_id = {}
+    if plan:
+        assignment_by_id = {
+            str(item.get("container_id", "")).strip().upper(): item
+            for item in plan.get("assignments", [])
+            if str(item.get("container_id", "")).strip()
+        }
+
+    # Dataset-level container count.
+    if (
+        ("how many" in q or "number of" in q or "count" in q)
+        and "container" in q
+        and not any(port.lower() in q for port in {
+            str(item.get("discharge_port", "")).strip()
+            for item in containers
+            if str(item.get("discharge_port", "")).strip()
+        })
+    ):
+        return f"There are {len(containers)} containers in the uploaded dataset."
+
+    # Counts by discharge port.
+    discharge_ports = {
+        str(item.get("discharge_port", "")).strip()
+        for item in containers
+        if str(item.get("discharge_port", "")).strip()
+    }
+
+    for port in discharge_ports:
+        if port.lower() in q and (
+            "how many" in q
+            or "number of" in q
+            or "count" in q
+            or "going" in q
+            or "unload" in q
+            or "discharge" in q
+        ):
+            count = sum(
+                1 for item in containers
+                if str(item.get("discharge_port", "")).strip() == port
+            )
+            return f"{count} containers are scheduled to discharge at {port}."
+
+    # Find a mentioned container ID such as CONT-0007.
+    match = re.search(r"\b[A-Z]+[-_]?\d+\b", question.upper())
+    if not match:
+        return None
+
+    container_id = match.group(0).replace("_", "-")
+    container = container_by_id.get(container_id)
+
+    if not container:
+        return (
+            f"{container_id} was not found in the currently uploaded dataset."
+        )
+
+    assignment = assignment_by_id.get(container_id)
+
+    weight = container.get("weight_kg")
+    size = container.get("size_ft")
+    loading_port = container.get("loading_port")
+    discharge_port = container.get("discharge_port")
+    destination_order = container.get("destination_order", 1)
+    refrigerated = bool(container.get("refrigerated", False))
+    hazardous = bool(container.get("hazardous", False))
+
+    if "weight" in q or "weigh" in q:
+        return f"{container_id} weighs {weight} kg."
+
+    if (
+        "where" in q
+        and ("unload" in q or "discharge" in q or "going" in q)
+    ) or "discharge port" in q:
+        return f"{container_id} will discharge at {discharge_port}."
+
+    if "loading port" in q or ("where" in q and "load" in q):
+        return f"{container_id} is loaded at {loading_port}."
+
+    if "size" in q:
+        return f"{container_id} is a {size}-ft container."
+
+    if "destination order" in q or "priority" in q:
+        return (
+            f"{container_id} has destination order {destination_order}."
+        )
+
+    if "refrigerated" in q or "reefer" in q:
+        return (
+            f"{container_id} is "
+            f"{'refrigerated' if refrigerated else 'not refrigerated'}."
+        )
+
+    if "hazardous" in q or "dangerous" in q:
+        return (
+            f"{container_id} is "
+            f"{'hazardous cargo' if hazardous else 'not marked hazardous'}."
+        )
+
+    if "slot" in q or "position" in q or "assigned" in q:
+        if not assignment:
+            return (
+                f"No generated stowage assignment is currently available "
+                f"for {container_id}. Generate a stowage plan first."
+            )
+
+        if "why" in q:
+            reason = assignment.get(
+                "assignment_reason",
+                "No assignment reason is available.",
+            )
+            details = assignment.get("reason_details", [])
+            if details:
+                return reason + " " + " ".join(str(item) for item in details)
+            return reason
+
+        return (
+            f"{container_id} is assigned to position "
+            f"{assignment.get('position_code', 'N/A')} "
+            f"(slot {assignment.get('slot_id', 'N/A')})."
+        )
+
+    # General request about one container.
+    return (
+        f"{container_id}: {size}-ft, {weight} kg, loaded at {loading_port}, "
+        f"discharged at {discharge_port}, destination order {destination_order}, "
+        f"refrigerated: {'yes' if refrigerated else 'no'}, "
+        f"hazardous: {'yes' if hazardous else 'no'}."
+    )
+
+
 @app.post("/api/ai/ask")
 def ask_ai(request: AIQuestion):
     try:
+        fast_answer = _fast_dataset_answer(
+            request.question,
+            request.containers,
+            request.plan,
+        )
+
+        if fast_answer is not None:
+            return {
+                "model": "dataset-engine",
+                "answer": fast_answer,
+                "dataset_context_used": True,
+                "uploaded_container_count": len(request.containers),
+                "response_mode": "instant_dataset_lookup",
+            }
+
         dataset_context = _build_ai_dataset_context(
             request.question,
             request.containers,
@@ -210,6 +373,7 @@ def ask_ai(request: AIQuestion):
             "answer": answer,
             "dataset_context_used": bool(dataset_context),
             "uploaded_container_count": len(request.containers),
+            "response_mode": "local_ai",
         }
     except Exception as exc:
         raise HTTPException(
