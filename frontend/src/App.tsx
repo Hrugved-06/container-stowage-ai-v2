@@ -872,6 +872,34 @@ function ManifestUpload({
   const [preview, setPreview] = useState<Record<string, unknown>[]>([]);
   const [totalRows, setTotalRows] = useState<number | null>(null);
 
+  const manifestColumns = [
+    { name: "container_id", required: true, example: "CONT-0001" },
+    { name: "size_ft", required: true, example: "20" },
+    { name: "weight_kg", required: true, example: "18500" },
+    { name: "loading_port", required: true, example: "JNPT" },
+    { name: "discharge_port", required: true, example: "Singapore" },
+    { name: "destination_order", required: false, example: "1" },
+    { name: "refrigerated", required: false, example: "false" },
+    { name: "hazardous", required: false, example: "false" },
+  ];
+
+  function downloadCsvTemplate() {
+    const header = manifestColumns.map((column) => column.name).join(",");
+    const example = manifestColumns.map((column) => column.example).join(",");
+    const csv = `${header}\n${example}\n`;
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "cargo_manifest_template.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
 
   async function uploadManifest() {
     if (!file) {
@@ -930,7 +958,61 @@ function ManifestUpload({
 <div className="panel manifest-upload">
 
       <h2>Import Cargo Manifest</h2>
-      <p>Upload a CSV or Excel (.xlsx) file containing your containers.</p>
+      <p>
+        Upload your container dataset in <strong>CSV (.csv)</strong> or{" "}
+        <strong>Excel (.xlsx)</strong> format.
+      </p>
+
+      <div className="manifest-format-guide">
+        <div className="manifest-format-heading">
+          <div>
+            <h3>Required dataset format</h3>
+            <p>
+              Keep these column names exactly as shown so the system can read
+              the manifest correctly.
+            </p>
+          </div>
+
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={downloadCsvTemplate}
+          >
+            Download CSV Template
+          </button>
+        </div>
+
+        <div className="manifest-format-table-wrapper">
+          <table className="manifest-format-table">
+            <thead>
+              <tr>
+                {manifestColumns.map((column) => (
+                  <th key={column.name}>
+                    {column.name}
+                    <span className={column.required ? "required-tag" : "optional-tag"}>
+                      {column.required ? "Required" : "Optional"}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {manifestColumns.map((column) => (
+                  <td key={column.name}>{column.example}</td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p className="manifest-format-note">
+          <strong>Rules:</strong> size_ft must be 20 or 40, weight_kg must be a
+          positive number, and loading_port and discharge_port must be
+          different. destination_order defaults to 1 if omitted; refrigerated
+          and hazardous default to false.
+        </p>
+      </div>
 
       <input
         type="file"
