@@ -658,3 +658,45 @@ h2 {
   font-size: 14px;
   font-weight: 600;
 }
+
+
+/* Explainable stowage assignments */
+
+.assignment-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.assignment-card {
+  padding: 14px 16px;
+  background: #0c1524;
+  border: 1px solid #2a3a50;
+  border-radius: 10px;
+}
+
+.assignment-card summary {
+  cursor: pointer;
+  color: #e8edf5;
+  line-height: 1.5;
+}
+
+.assignment-card summary::marker {
+  color: #22d3ee;
+}
+
+.assignment-summary-reason {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.assignment-card p,
+.assignment-card ul {
+  margin: 12px 0 0;
+}
+
+.assignment-card li {
+  margin: 6px 0;
+  color: #b7c4d7;
+  line-height: 1.5;
+}
