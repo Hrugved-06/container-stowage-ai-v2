@@ -1215,6 +1215,20 @@ function VesselLayout({
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!plan?.assignments.length) return;
+
+    const firstAssignedPosition =
+      plan.assignments[0].occupied_positions?.[0]
+      ?? plan.assignments[0].position_code;
+
+    const firstBay = Number(firstAssignedPosition?.split("-")[0]);
+
+    if (Number.isFinite(firstBay) && firstBay > 0) {
+      setSelectedBay(firstBay);
+    }
+  }, [plan]);
+
+  useEffect(() => {
     fetch("http://127.0.0.1:8000/api/vessel/layout")
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load vessel layout.");
