@@ -1,5 +1,6 @@
 
 
+import os
 import io
 import json
 import re
@@ -376,6 +377,19 @@ def ask_ai(request: AIQuestion):
             "response_mode": "local_ai",
         }
     except Exception as exc:
+        if os.getenv("VERCEL"):
+            return {
+                "model": "dataset-engine",
+                "answer": (
+                    "The cloud deployment can answer uploaded dataset and "
+                    "generated-plan questions, but general Qwen/Ollama reasoning "
+                    "is only available when the project is running locally with Ollama."
+                ),
+                "dataset_context_used": bool(request.containers or request.plan),
+                "uploaded_container_count": len(request.containers),
+                "response_mode": "cloud_dataset_only",
+            }
+
         raise HTTPException(
             status_code=503,
             detail=f"Local AI service unavailable: {exc}",
