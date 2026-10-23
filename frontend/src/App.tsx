@@ -70,13 +70,23 @@ function App() {
         </header>
 
         <section className="page-content">
-          <p className="eyebrow">CONTAINER VESSEL OPERATIONS</p>
-          <h1>
-            {tabs.find((tab) => tab.id === activeTab)?.label}
-          </h1>
-          <p className="subtitle">
-            AI-assisted cargo scheduling and voyage planning.
-          </p>
+          <div className="hero-panel">
+            <p className="eyebrow">AI / OPTIMIZATION & VOYAGE PLANNING ENGINE</p>
+            <h1>
+              {tabs.find((tab) => tab.id === activeTab)?.label}
+            </h1>
+            <p className="subtitle">
+              AI-assisted cargo scheduling and voyage planning.
+            </p>
+
+            <div className="hero-status-row">
+              <span className="engine-badge">AI / Optimization Engine</span>
+              <span className="connection-badge">
+                <span className="status-dot" />
+                Backend Connected
+              </span>
+            </div>
+          </div>
 
           {activeTab === "overview" && (
             <>
