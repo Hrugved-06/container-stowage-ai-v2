@@ -170,13 +170,19 @@ async def upload_manifest(file: UploadFile = File(...)):
 
 @app.post("/api/voyage/simulate")
 def simulate_voyage_endpoint(request: VoyageSimulationRequest):
-    vessel = request.vessel or create_vessel_layout()
+    try:
+        vessel = request.vessel or create_vessel_layout()
 
-    return simulate_voyage(
-        manifest=request.manifest,
-        vessel=vessel,
-        port_sequence=request.port_sequence,
-    )
+        return simulate_voyage(
+            manifest=request.manifest,
+            vessel=vessel,
+            port_sequence=request.port_sequence,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
 
 
 
