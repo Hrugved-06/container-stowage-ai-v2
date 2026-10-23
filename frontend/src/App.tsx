@@ -444,13 +444,32 @@ const [plan, setPlan] = useState<null | {
       return;
     }
 
+    const containersToSend =
+      uploadedContainers.length > 0 ? uploadedContainers : containers;
+
+    const requiredPorts = new Set<string>();
+
+    containersToSend.forEach((item) => {
+      requiredPorts.add(String(item.loading_port).trim());
+      requiredPorts.add(String(item.discharge_port).trim());
+    });
+
+    const missingPorts = [...requiredPorts].filter(
+      (port) => port && !ports.includes(port)
+    );
+
+    if (missingPorts.length > 0) {
+      setVoyageMessage(
+        `Port sequence is missing: ${missingPorts.join(", ")}. Add all loading and discharge ports used by the manifest.`
+      );
+      return;
+    }
+
     setVoyageLoading(true);
     setVoyageMessage("");
     setVoyageResult(null);
 
     try {
-      const containersToSend =
-        uploadedContainers.length > 0 ? uploadedContainers : containers;
 
       const response = await fetch(
         "http://127.0.0.1:8000/api/voyage/simulate",
