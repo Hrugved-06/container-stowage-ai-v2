@@ -126,6 +126,22 @@ assigned_orders = [
 
 assert all(order >= 1 for order in assigned_orders)
 
+# Verify that assigned containers include a transparent reason.
+for assignment in result["assignments"]:
+    assert assignment.get("assignment_reason"), (
+        f"Missing assignment_reason for {assignment['container_id']}"
+    )
+    assert assignment.get("selection_mode") in {
+        "ai_preferred",
+        "validated_fallback",
+        "rule_based",
+    }
+    assert assignment.get("reason_details"), (
+        f"Missing reason_details for {assignment['container_id']}"
+    )
+
+print("Assignment explanation test: PASS")
+
 print("Destination-order test: PASS")
 
 # Verify 40-foot containers reserve two adjacent bay positions.
