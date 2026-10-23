@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 
 import "./App.css";
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ??
+  (import.meta.env.DEV ? "http://127.0.0.1:8000" : "");
+
 type Tab = "overview" | "cargo" | "vessel" | "ai";
 
 function App() {
@@ -339,7 +343,7 @@ const [plan, setPlan] = useState<null | {
       console.log("Containers to send:", containersToSend.length);
       console.log("Sending POST /api/plan");
 
-      const response = await fetch("http://127.0.0.1:8000/api/plan", {
+      const response = await fetch(`${API_BASE_URL}/api/plan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -396,7 +400,7 @@ const [plan, setPlan] = useState<null | {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000/api/plan/export/${fileFormat}`,
+        `${API_BASE_URL}/api/plan/export/${fileFormat}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -476,7 +480,7 @@ const [plan, setPlan] = useState<null | {
     try {
 
       const response = await fetch(
-        "http://127.0.0.1:8000/api/voyage/simulate",
+        `${API_BASE_URL}/api/voyage/simulate`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -914,7 +918,7 @@ function LocalAIChat({
     setAnswer("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/ai/ask", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/ask`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1052,7 +1056,7 @@ function ManifestUpload({
       formData.append("file", file);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/api/manifest/upload",
+        `${API_BASE_URL}/api/manifest/upload`,
         {
           method: "POST",
           body: formData,
@@ -1256,7 +1260,7 @@ function VesselLayout({
   }, [plan]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/vessel/layout")
+    fetch(`${API_BASE_URL}/api/vessel/layout`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load vessel layout.");
         return response.json();
