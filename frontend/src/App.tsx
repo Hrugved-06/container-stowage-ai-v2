@@ -186,11 +186,15 @@ function App() {
             <div className="panel">
               <h2>Local AI Assistant</h2>
               <p>
-                Ask questions about container stowage, cargo scheduling, and
-                voyage planning. Powered locally by Qwen 2.5 7B through Ollama.
+                Ask questions about container stowage, cargo scheduling,
+                voyage planning, or your currently uploaded manifest.
+                Powered locally by Qwen 2.5 7B through Ollama.
               </p>
 
-              <LocalAIChat />
+              <LocalAIChat
+                uploadedContainers={uploadedContainers}
+                plan={latestPlan}
+              />
             </div>
           )}
 
@@ -887,11 +891,18 @@ const [plan, setPlan] = useState<null | {
 }
 
 
-function LocalAIChat() {
+function LocalAIChat({
+  uploadedContainers,
+  plan,
+}: {
+  uploadedContainers: Record<string, unknown>[];
+  plan: unknown;
+}) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const hasDataset = uploadedContainers.length > 0;
 
   async function askAI() {
     const trimmedQuestion = question.trim();
@@ -908,7 +919,11 @@ function LocalAIChat() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question: trimmedQuestion }),
+        body: JSON.stringify({
+          question: trimmedQuestion,
+          containers: uploadedContainers,
+          plan,
+        }),
       });
 
       const data = await response.json();
@@ -935,12 +950,24 @@ function LocalAIChat() {
 
   return (
     <div className="ai-chat">
+      <div className="ai-context-status">
+        <span className={hasDataset ? "context-dot active" : "context-dot"} />
+        {hasDataset
+          ? `Dataset connected: ${uploadedContainers.length} containers`
+          : "No uploaded dataset connected"}
+        {plan ? " · Latest stowage plan available" : ""}
+      </div>
+
       <label htmlFor="ai-question">Your question</label>
       <textarea
         id="ai-question"
         value={question}
         onChange={(e) => setQuestion(e.target.value)}
-        placeholder="e.g. Why is vessel stability important?"
+        placeholder={
+          hasDataset
+            ? "e.g. What is the weight of CONT-0007? Where will CONT-0002 unload? Which slot is CONT-0005 assigned to?"
+            : "e.g. Why is vessel stability important?"
+        }
         rows={4}
       />
 
