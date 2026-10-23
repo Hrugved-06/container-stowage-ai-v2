@@ -281,6 +281,7 @@ function CargoManifestForm({
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [useAIForPlacement, setUseAIForPlacement] = useState(false);
+  const [savingFormat, setSavingFormat] = useState<string | null>(null);
 
   const [portSequence, setPortSequence] = useState("JNPT, Singapore, Hamburg");
   const [voyageLoading, setVoyageLoading] = useState(false);
@@ -380,6 +381,54 @@ const [plan, setPlan] = useState<null | {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+
+  async function savePlan(fileFormat: "pdf" | "xlsx" | "csv" | "json" | "docx") {
+    if (!plan) return;
+
+    setSavingFormat(fileFormat);
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/plan/export/${fileFormat}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(plan),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(
+          data?.detail ?? "Could not save the generated plan."
+        );
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `stowage_plan.${fileFormat}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setMessage(
+        `Plan saved successfully as ${fileFormat.toUpperCase()}.`
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Could not save the generated plan."
+      );
+    } finally {
+      setSavingFormat(null);
     }
   }
 
@@ -729,7 +778,39 @@ const [plan, setPlan] = useState<null | {
           <p>AI preferred slots accepted: {plan.ai_accepted_count}</p>
           <p>AI fallback slots used: {plan.ai_fallback_count}</p>
 
+          <div className="save-plan-panel">
+            <div>
+              <h4>Save Plan</h4>
+              <p>
+                Download this generated plan to your computer so it remains
+                available even after you close the website.
+              </p>
+            </div>
 
+            <div className="save-plan-actions">
+              {[
+                ["pdf", "PDF"],
+                ["xlsx", "Excel"],
+                ["csv", "CSV"],
+                ["json", "JSON"],
+                ["docx", "Word"],
+              ].map(([format, label]) => (
+                <button
+                  key={format}
+                  type="button"
+                  className="save-plan-button"
+                  disabled={savingFormat !== null}
+                  onClick={() =>
+                    savePlan(
+                      format as "pdf" | "xlsx" | "csv" | "json" | "docx"
+                    )
+                  }
+                >
+                  {savingFormat === format ? "Saving..." : label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {plan.assignments.length > 0 && (
             <>
