@@ -14,6 +14,9 @@ function App() {
     position_code: string;
     occupied_positions?: string[];
     size_ft?: number;
+    selection_mode?: string;
+    assignment_reason?: string;
+    reason_details?: string[];
   }[];
 } | null>(null);
 
@@ -245,6 +248,9 @@ function CargoManifestForm({
       position_code: string;
       occupied_positions?: string[];
       size_ft?: number;
+      selection_mode?: string;
+      assignment_reason?: string;
+      reason_details?: string[];
     }[];
   }) => void;
 }) {
@@ -293,6 +299,9 @@ const [plan, setPlan] = useState<null | {
   assignments: {
     container_id: string;
     position_code: string;
+    selection_mode?: string;
+    assignment_reason?: string;
+    reason_details?: string[];
   }[];
   unassigned: {
     container_id: string;
@@ -704,13 +713,37 @@ const [plan, setPlan] = useState<null | {
           {plan.assignments.length > 0 && (
             <>
               <h4>Assignments</h4>
-              <ul>
+              <div className="assignment-list">
                 {plan.assignments.map((item) => (
-                  <li key={item.container_id}>
-                    {item.container_id} → Position {item.position_code}
-                  </li>
+                  <details className="assignment-card" key={item.container_id}>
+                    <summary>
+                      <strong>{item.container_id}</strong>
+                      {" → "}
+                      Position {item.position_code}
+                      {item.assignment_reason && (
+                        <span className="assignment-summary-reason">
+                          {" · "}{item.assignment_reason}
+                        </span>
+                      )}
+                    </summary>
+
+                    {item.selection_mode && (
+                      <p>
+                        <strong>Selection mode:</strong>{" "}
+                        {item.selection_mode.replaceAll("_", " ")}
+                      </p>
+                    )}
+
+                    {item.reason_details?.length ? (
+                      <ul>
+                        {item.reason_details.map((reason, index) => (
+                          <li key={index}>{reason}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </details>
                 ))}
-              </ul>
+              </div>
             </>
           )}
 
