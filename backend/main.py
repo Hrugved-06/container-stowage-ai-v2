@@ -93,15 +93,123 @@ from pydantic import BaseModel, Field
 
 class AIQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+    containers: list[dict] = Field(default_factory=list)
+    plan: dict | None = None
+
+
+def _build_ai_dataset_context(
+    question: str,
+    containers: list[dict],
+    plan: dict | None,
+) -> str | None:
+    if not containers and not plan:
+        return None
+
+    question_lower = question.lower()
+
+    # Find explicitly mentioned container IDs first.
+    mentioned_ids = {
+        str(item.get("container_id", "")).strip()
+        for item in containers
+        if str(item.get("container_id", "")).strip()
+        and str(item.get("container_id", "")).lower() in question_lower
+    }
+
+    # If no container ID was mentioned, look for loading/discharge ports.
+    known_ports = {
+        str(item.get(key, "")).strip()
+        for item in containers
+        for key in ("loading_port", "discharge_port")
+        if str(item.get(key, "")).strip()
+    }
+
+    mentioned_ports = {
+        port for port in known_ports
+        if port.lower() in question_lower
+    }
+
+    if mentioned_ids:
+        relevant_containers = [
+            item for item in containers
+            if str(item.get("container_id", "")).strip() in mentioned_ids
+        ]
+    elif mentioned_ports:
+        relevant_containers = [
+            item for item in containers
+            if str(item.get("loading_port", "")).strip() in mentioned_ports
+            or str(item.get("discharge_port", "")).strip() in mentioned_ports
+        ]
+    elif len(containers) <= 100:
+        relevant_containers = containers
+    else:
+        relevant_containers = containers[:100]
+
+    # Keep plan assignments aligned with the relevant containers.
+    relevant_ids = {
+        str(item.get("container_id", "")).strip()
+        for item in relevant_containers
+    }
+
+    plan_context = None
+    if plan:
+        assignments = plan.get("assignments", [])
+        relevant_assignments = [
+            item for item in assignments
+            if not relevant_ids
+            or str(item.get("container_id", "")).strip() in relevant_ids
+        ]
+
+        plan_context = {
+            "vessel_id": plan.get("vessel_id"),
+            "assigned_count": plan.get("assigned_count"),
+            "unassigned_count": plan.get("unassigned_count"),
+            "estimated_rehandles": plan.get("estimated_rehandles"),
+            "assignments": relevant_assignments[:100],
+        }
+
+    destination_counts = {}
+    for item in containers:
+        port = str(item.get("discharge_port", "")).strip()
+        if port:
+            destination_counts[port] = destination_counts.get(port, 0) + 1
+
+    context = {
+        "dataset_summary": {
+            "total_containers": len(containers),
+            "discharge_port_counts": destination_counts,
+            "context_rows_returned": len(relevant_containers),
+            "context_truncated": (
+                len(containers) > len(relevant_containers)
+                and not mentioned_ids
+                and not mentioned_ports
+            ),
+        },
+        "containers": relevant_containers,
+        "latest_stowage_plan": plan_context,
+    }
+
+    return json.dumps(context, indent=2, default=str)
 
 
 @app.post("/api/ai/ask")
 def ask_ai(request: AIQuestion):
     try:
-        answer = ask_local_ai(request.question)
+        dataset_context = _build_ai_dataset_context(
+            request.question,
+            request.containers,
+            request.plan,
+        )
+
+        answer = ask_local_ai(
+            request.question,
+            dataset_context=dataset_context,
+        )
+
         return {
             "model": "qwen2.5:7b",
             "answer": answer,
+            "dataset_context_used": bool(dataset_context),
+            "uploaded_container_count": len(request.containers),
         }
     except Exception as exc:
         raise HTTPException(
