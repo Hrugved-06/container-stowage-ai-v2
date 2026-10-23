@@ -5,25 +5,41 @@ import ollama
 MODEL_NAME = "qwen2.5:7b"
 
 
-def ask_local_ai(prompt: str) -> str:
-    """Send a prompt to the locally running Ollama model."""
+def ask_local_ai(prompt: str, dataset_context: str | None = None) -> str:
+    """Answer general or uploaded-dataset questions using local Qwen."""
+
+    system_message = (
+        "You are an assistant for a container vessel stowage planning system. "
+        "Give clear, concise answers. Never claim that a stowage plan is "
+        "physically valid unless the Python placement engine has validated it. "
+        "When UPLOADED DATASET CONTEXT is provided, treat it as the only source "
+        "of truth for questions about uploaded containers, ports, weights, "
+        "sizes, reefer/hazardous flags, destination order, and slot assignments. "
+        "Copy exact values from the context. Never invent or estimate a value. "
+        "If the requested information is not present, say that it is not "
+        "available in the uploaded dataset or generated plan."
+    )
+
+    user_message = prompt
+    if dataset_context:
+        user_message = (
+            f"QUESTION:\n{prompt}\n\n"
+            f"UPLOADED DATASET CONTEXT:\n{dataset_context}"
+        )
 
     response = ollama.chat(
         model=MODEL_NAME,
+        options={
+            "temperature": 0,
+        },
         messages=[
             {
                 "role": "system",
-                "content": (
-                    "You are an assistant for a container vessel "
-                    "stowage planning system. Give clear, concise "
-                    "answers. Never claim that a stowage plan is "
-                    "physically valid unless the Python placement "
-                    "engine has validated it."
-                ),
+                "content": system_message,
             },
             {
                 "role": "user",
-                "content": prompt,
+                "content": user_message,
             },
         ],
     )
