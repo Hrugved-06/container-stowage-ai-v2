@@ -64,6 +64,74 @@ def estimate_rehandles(assignments: list[dict], manifest: CargoManifest,
     }
 
 
+def build_assignment_explanation(
+    container,
+    chosen_slot,
+    chosen_positions,
+    preferred_slot_id: str | None,
+) -> dict:
+    """Explain why the planner accepted this container-slot assignment."""
+
+    if preferred_slot_id == chosen_slot.slot_id:
+        selection_mode = "ai_preferred"
+        assignment_reason = (
+            "AI-preferred slot accepted after all placement checks passed."
+        )
+    elif preferred_slot_id:
+        selection_mode = "validated_fallback"
+        assignment_reason = (
+            "Fallback slot selected because the AI-preferred slot was not "
+            "usable when this container was assigned."
+        )
+    else:
+        selection_mode = "rule_based"
+        assignment_reason = (
+            "First available compatible slot selected in Bay-Row-Tier order."
+        )
+
+    reason_details = [
+        (
+            f"Slot {chosen_slot.slot_id} at {chosen_slot.position_code} "
+            "was free when assigned."
+        ),
+        (
+            f"Container weight {container.weight_kg:.0f} kg is within the "
+            f"slot limit of {chosen_slot.max_weight_kg:.0f} kg."
+        ),
+        (
+            f"Destination priority is {container.destination_order}; "
+            "earlier discharge ports are processed first."
+        ),
+    ]
+
+    if container.size_ft == 40:
+        reason_details.append(
+            "The required two-position 40-foot footprint was available."
+        )
+    else:
+        reason_details.append(
+            "The required 20-foot footprint was available."
+        )
+
+    if container.refrigerated:
+        reason_details.append(
+            "Reefer requirement passed because the selected footprint is "
+            "reefer-capable."
+        )
+
+    if container.hazardous:
+        reason_details.append(
+            "Hazardous-cargo requirement passed because the selected "
+            "footprint permits hazardous cargo."
+        )
+
+    return {
+        "selection_mode": selection_mode,
+        "assignment_reason": assignment_reason,
+        "reason_details": reason_details,
+    }
+
+
 def create_stowage_plan(
     manifest: CargoManifest,
     vessel: VesselSlotPlan,
@@ -412,6 +480,13 @@ def create_stowage_plan(
 
         occupied_positions.update(chosen_positions)
 
+        explanation = build_assignment_explanation(
+            container=container,
+            chosen_slot=chosen_slot,
+            chosen_positions=chosen_positions,
+            preferred_slot_id=preferred_slot_id,
+        )
+
         assignments.append({
             "container_id": container.container_id,
             "slot_id": chosen_slot.slot_id,
@@ -424,6 +499,7 @@ def create_stowage_plan(
                 f"{bay:02d}-{row:02d}-{tier:02d}"
                 for bay, row, tier in chosen_positions
             ],
+            **explanation,
         })
 
     rehandling = estimate_rehandles(assignments, manifest, vessel)
