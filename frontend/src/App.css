@@ -962,3 +962,33 @@ tbody tr:hover {
     justify-content: flex-start;
   }
 }
+
+
+/* Uploaded dataset context status for Local AI */
+
+.ai-context-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 18px;
+  padding: 11px 14px;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #d8e0ea;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.context-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.context-dot.active {
+  background: #22c55e;
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+}
