@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 
 import "./App.css";
 
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+
 type Tab = "overview" | "cargo" | "vessel" | "ai";
 
 function App() {
@@ -173,11 +175,15 @@ function App() {
             <div className="panel">
               <h2>Local AI Assistant</h2>
               <p>
-                Ask questions about container stowage, cargo scheduling, and
-                voyage planning. Powered locally by Qwen 2.5 7B through Ollama.
+                Ask general questions or questions about container stowage, cargo scheduling,
+                voyage planning, the uploaded manifest, and the latest generated plan.
+                Qwen runs locally through Ollama, with an optional hosted fallback for deployment.
               </p>
 
-              <LocalAIChat />
+              <LocalAIChat
+                uploadedContainers={uploadedContainers}
+                latestPlan={latestPlan}
+              />
             </div>
           )}
 
@@ -314,7 +320,7 @@ const [plan, setPlan] = useState<null | {
       console.log("Containers to send:", containersToSend.length);
       console.log("Sending POST /api/plan");
 
-      const response = await fetch("http://127.0.0.1:8000/api/plan", {
+      const response = await fetch(`${API_BASE_URL}/api/plan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -383,7 +389,7 @@ const [plan, setPlan] = useState<null | {
         uploadedContainers.length > 0 ? uploadedContainers : containers;
 
       const response = await fetch(
-        "http://127.0.0.1:8000/api/voyage/simulate",
+        `${API_BASE_URL}/api/voyage/simulate`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -733,9 +739,23 @@ const [plan, setPlan] = useState<null | {
 }
 
 
-function LocalAIChat() {
+function LocalAIChat({
+  uploadedContainers,
+  latestPlan,
+}: {
+  uploadedContainers: Record<string, unknown>[];
+  latestPlan: {
+    assignments: {
+      container_id: string;
+      position_code: string;
+      occupied_positions?: string[];
+      size_ft?: number;
+    }[];
+  } | null;
+}) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
+  const [source, setSource] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -747,14 +767,27 @@ function LocalAIChat() {
     setLoading(true);
     setError("");
     setAnswer("");
+    setSource("");
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/ai/ask", {
+      const response = await fetch(`${API_BASE_URL}/api/ai/ask`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question: trimmedQuestion }),
+        body: JSON.stringify({
+          question: trimmedQuestion,
+          context: {
+            uploaded_container_count: uploadedContainers.length,
+            uploaded_containers_sample: uploadedContainers.slice(0, 50),
+            latest_plan: latestPlan
+              ? {
+                  assigned_count: latestPlan.assignments.length,
+                  assignments: latestPlan.assignments.slice(0, 100),
+                }
+              : null,
+          },
+        }),
       });
 
       const data = await response.json();
@@ -767,12 +800,17 @@ function LocalAIChat() {
         );
       }
 
-      setAnswer(data.answer);
+      setAnswer(String(data.answer ?? ""));
+      setSource(
+        data.provider && data.model
+          ? `${data.provider} · ${data.model}`
+          : ""
+      );
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Could not connect to the local AI backend."
+          : "Could not connect to the AI backend."
       );
     } finally {
       setLoading(false);
@@ -808,6 +846,7 @@ function LocalAIChat() {
       {answer && (
         <div className="plan-results">
           <h3>AI Response</h3>
+          {source && <p><small>Answered by: {source}</small></p>}
           <p className="ai-answer">{answer}</p>
         </div>
       )}
@@ -843,7 +882,7 @@ function ManifestUpload({
       formData.append("file", file);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/api/manifest/upload",
+        `${API_BASE_URL}/api/manifest/upload`,
         {
           method: "POST",
           body: formData,
@@ -979,7 +1018,7 @@ function VesselLayout({
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/vessel/layout")
+    fetch(`${API_BASE_URL}/api/vessel/layout`)
       .then(async (response) => {
         if (!response.ok) throw new Error("Could not load vessel layout.");
         return response.json();

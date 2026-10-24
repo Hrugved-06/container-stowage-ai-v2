@@ -75,15 +75,33 @@ Open the local URL printed by Vite, normally:
 
 http://localhost:5173
 
-### 4. Set up the local AI assistant
+### 4. Set up the AI assistant
 
-Install Ollama, then run:
+For local development, install Ollama and run:
 
 ```powershell
 ollama pull qwen2.5:7b
 ```
 
-Make sure Ollama is running before using AI features. Other project features may work without the local AI model, depending on their implementation.
+The assistant now tries providers in this order:
+
+1. Local Qwen 2.5 7B through Ollama.
+2. An optional hosted OpenAI-compatible model.
+3. Built-in project knowledge for common project/stowage questions.
+
+For a deployed frontend/backend, configure these environment variables in the hosting dashboard (do not commit API keys):
+
+```text
+VITE_API_BASE_URL=https://your-backend.example.com
+CORS_ORIGINS=https://your-frontend.vercel.app
+CLOUD_AI_BASE_URL=https://your-openai-compatible-provider.example.com/v1
+CLOUD_AI_API_KEY=<set as a secret in the hosting dashboard>
+CLOUD_AI_MODEL=<provider model id>
+```
+
+`CLOUD_AI_*` variables are optional locally. They are required if you want unrestricted general AI answers on a cloud deployment where Ollama is not running.
+
+The AI endpoint also receives a bounded summary of the current uploaded manifest and latest generated plan, allowing it to answer project-context questions without inventing unavailable values.
 
 ## Running Tests
 
