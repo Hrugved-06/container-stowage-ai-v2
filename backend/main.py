@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from backend.voyage_simulation import simulate_voyage
 from backend.vessel_layout import create_vessel_layout
-from backend.ai_service import ask_local_ai
+from backend.ai_service import ask_ai
 from backend.models import CargoManifest
 from backend.slots import VesselSlotPlan
 from backend.placement import create_stowage_plan
@@ -82,20 +82,25 @@ from pydantic import BaseModel, Field
 
 class AIQuestion(BaseModel):
     question: str = Field(min_length=1, max_length=2000)
+    context: dict[str, object] | None = None
 
 
 @app.post("/api/ai/ask")
-def ask_ai(request: AIQuestion):
+def ask_ai_endpoint(request: AIQuestion):
+    """Answer general and project-specific questions.
+
+    The service tries local Ollama first, then an optional hosted
+    OpenAI-compatible model, then a built-in project-knowledge fallback.
+    """
     try:
-        answer = ask_local_ai(request.question)
-        return {
-            "model": "qwen2.5:7b",
-            "answer": answer,
-        }
+        return ask_ai(
+            request.question,
+            context=request.context,
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=503,
-            detail=f"Local AI service unavailable: {exc}",
+            detail=f"AI service unavailable: {exc}",
         ) from exc
 
 
