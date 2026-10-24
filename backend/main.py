@@ -1,6 +1,7 @@
 
 
 import io
+import os
 import pandas as pd
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
@@ -22,9 +23,18 @@ app = FastAPI(
     version="0.1.0",
 )
 
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,7 +62,7 @@ def health_check():
     return {
         "status": "healthy",
         "service": "container-stowage-api",
-        "ai_runtime": "Ollama",
+        "ai_runtime": "Ollama with optional hosted fallback",
     }
 
 
